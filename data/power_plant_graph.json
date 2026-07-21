@@ -1,0 +1,296 @@
+{
+  "graph": {
+    "name": "Small Diesel Power Plant",
+    "description": "A simplified representation of a diesel-driven electrical power generation plant including prime mover, generator, protection, control, and distribution components.",
+    "nodes": [
+      {
+        "id": "node_engine",
+        "label": "DieselEngine",
+        "properties": {
+          "name": "Diesel Prime Mover",
+          "model": "CAT C18 ACERT",
+          "rated_power_kw": 600,
+          "rated_speed_rpm": 1500,
+          "fuel_type": "diesel",
+          "cooling": "liquid-cooled",
+          "description": "The diesel internal combustion engine that acts as the prime mover. It converts chemical energy from fuel into mechanical rotation that drives the alternator shaft.",
+          "pp_code": "PP-ENG-001",
+          "maintenance_interval_hours": 500,
+          "alarms": ["high_coolant_temp", "low_oil_pressure", "overspeed", "underspeed"]
+        }
+      },
+      {
+        "id": "node_alternator",
+        "label": "Alternator",
+        "properties": {
+          "name": "Synchronous Alternator",
+          "model": "Stamford HCI444F",
+          "rated_kva": 750,
+          "rated_kw": 600,
+          "voltage_v": 400,
+          "frequency_hz": 50,
+          "power_factor": 0.8,
+          "phases": 3,
+          "description": "The three-phase synchronous generator mechanically coupled to the diesel engine. Converts mechanical rotation into AC electrical energy.",
+          "pp_code": "PP-ALT-001",
+          "protection_class": "IP23",
+          "alarms": ["high_winding_temp", "overvoltage", "undervoltage", "overcurrent"]
+        }
+      },
+      {
+        "id": "node_avr",
+        "label": "AVR",
+        "properties": {
+          "name": "Automatic Voltage Regulator",
+          "model": "Stamford MX341",
+          "input_voltage_range_v": "170-270",
+          "output_voltage_setpoint_v": 400,
+          "regulation_accuracy_pct": 0.5,
+          "description": "The AVR continuously monitors the alternator output voltage and adjusts the excitation current to maintain stable output voltage under varying load conditions.",
+          "pp_code": "PP-AVR-001",
+          "alarms": ["avr_fault", "excitation_loss"]
+        }
+      },
+      {
+        "id": "node_governor",
+        "label": "ElectronicGovernor",
+        "properties": {
+          "name": "Electronic Speed Governor",
+          "model": "Woodward EG3P",
+          "description": "Controls the fuel rack position of the diesel engine to maintain constant rotational speed (and therefore frequency) regardless of load changes.",
+          "pp_code": "PP-GOV-001",
+          "speed_droop_pct": 4,
+          "alarms": ["governor_fault", "actuator_fault"]
+        }
+      },
+      {
+        "id": "node_main_breaker",
+        "label": "CircuitBreaker",
+        "properties": {
+          "name": "Main Generator Circuit Breaker",
+          "model": "Schneider NSX400F",
+          "rated_current_a": 400,
+          "rated_voltage_v": 690,
+          "breaking_capacity_ka": 36,
+          "type": "moulded_case",
+          "description": "The main protection switch between the alternator output and the main bus bar. Trips automatically on fault conditions such as short circuit or overload.",
+          "pp_code": "PP-MCB-001",
+          "alarms": ["breaker_trip", "breaker_fault"]
+        }
+      },
+      {
+        "id": "node_transformer",
+        "label": "StepUpTransformer",
+        "properties": {
+          "name": "Step-Up Distribution Transformer",
+          "model": "ABB ONAN 630kVA",
+          "primary_voltage_v": 400,
+          "secondary_voltage_v": 11000,
+          "rated_kva": 630,
+          "vector_group": "Dyn11",
+          "cooling": "ONAN",
+          "description": "Steps up the generator voltage from 400V to 11kV for more efficient distribution over longer distances to the load centers.",
+          "pp_code": "PP-TRF-001",
+          "alarms": ["high_oil_temp", "buchholz_trip", "winding_temp_high"]
+        }
+      },
+      {
+        "id": "node_busbar",
+        "label": "MainBusBar",
+        "properties": {
+          "name": "11kV Main Distribution Bus",
+          "rated_voltage_kv": 11,
+          "rated_current_a": 600,
+          "material": "copper",
+          "description": "The central distribution point at 11kV where the transformer secondary connects and distributes power to different feeders and loads.",
+          "pp_code": "PP-BUS-001"
+        }
+      },
+      {
+        "id": "node_control_panel",
+        "label": "ControlPanel",
+        "properties": {
+          "name": "Generator Control Panel (GCP)",
+          "model": "ComAp InteliGen NT",
+          "description": "The master control unit that monitors all plant parameters (voltage, current, frequency, temperature, pressure), manages automatic start/stop sequences, and provides alarms and fault logging.",
+          "pp_code": "PP-GCP-001",
+          "communication_protocols": ["Modbus RTU", "Modbus TCP", "CANbus", "J1939"],
+          "display": "7-inch touchscreen",
+          "alarms": ["communication_fault", "panel_power_loss"]
+        }
+      },
+      {
+        "id": "node_load_feeder_a",
+        "label": "LoadFeeder",
+        "properties": {
+          "name": "Feeder A - Essential Loads",
+          "rated_kw": 200,
+          "load_type": "essential",
+          "description": "Distribution feeder supplying essential/critical loads (lighting, control systems, safety equipment) that must remain energized at all times.",
+          "pp_code": "PP-LFA-001"
+        }
+      },
+      {
+        "id": "node_load_feeder_b",
+        "label": "LoadFeeder",
+        "properties": {
+          "name": "Feeder B - Industrial Loads",
+          "rated_kw": 400,
+          "load_type": "industrial",
+          "description": "Distribution feeder supplying industrial loads (motors, HVAC, process equipment) that can be shed during low generation capacity.",
+          "pp_code": "PP-LFB-001"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge_001",
+        "from": "node_engine",
+        "to": "node_alternator",
+        "label": "MECHANICALLY_COUPLED",
+        "properties": {
+          "coupling_type": "direct_flexible",
+          "description": "The diesel engine crankshaft is directly coupled to the alternator rotor shaft via a flexible disc coupling, transmitting mechanical torque."
+        }
+      },
+      {
+        "id": "edge_002",
+        "from": "node_alternator",
+        "to": "node_avr",
+        "label": "EXCITATION_FEEDBACK",
+        "properties": {
+          "signal_type": "voltage_sensing",
+          "description": "The AVR senses the alternator terminal voltage and controls the excitation winding current to regulate output voltage."
+        }
+      },
+      {
+        "id": "edge_003",
+        "from": "node_avr",
+        "to": "node_alternator",
+        "label": "CONTROLS_EXCITATION",
+        "properties": {
+          "signal_type": "DC_excitation_current",
+          "description": "The AVR outputs a controlled DC current to the alternator field winding to adjust magnetic flux and thus output voltage."
+        }
+      },
+      {
+        "id": "edge_004",
+        "from": "node_governor",
+        "to": "node_engine",
+        "label": "CONTROLS_SPEED",
+        "properties": {
+          "signal_type": "fuel_rack_position",
+          "description": "The governor controls the fuel injection rack of the diesel engine to maintain constant speed and frequency."
+        }
+      },
+      {
+        "id": "edge_005",
+        "from": "node_engine",
+        "to": "node_governor",
+        "label": "SPEED_FEEDBACK",
+        "properties": {
+          "signal_type": "magnetic_pickup_pulse",
+          "description": "A magnetic pickup sensor on the engine flywheel sends speed pulses to the governor as feedback."
+        }
+      },
+      {
+        "id": "edge_006",
+        "from": "node_alternator",
+        "to": "node_main_breaker",
+        "label": "POWER_FLOW",
+        "properties": {
+          "voltage_v": 400,
+          "description": "Three-phase AC power flows from the alternator terminals to the main circuit breaker."
+        }
+      },
+      {
+        "id": "edge_007",
+        "from": "node_main_breaker",
+        "to": "node_transformer",
+        "label": "POWER_FLOW",
+        "properties": {
+          "voltage_v": 400,
+          "description": "When the main breaker is closed, power flows to the step-up transformer primary winding."
+        }
+      },
+      {
+        "id": "edge_008",
+        "from": "node_transformer",
+        "to": "node_busbar",
+        "label": "POWER_FLOW",
+        "properties": {
+          "voltage_kv": 11,
+          "description": "Stepped-up 11kV power from the transformer secondary feeds the main distribution bus bar."
+        }
+      },
+      {
+        "id": "edge_009",
+        "from": "node_busbar",
+        "to": "node_load_feeder_a",
+        "label": "SUPPLIES",
+        "properties": {
+          "description": "The main bus distributes power to the essential loads feeder."
+        }
+      },
+      {
+        "id": "edge_010",
+        "from": "node_busbar",
+        "to": "node_load_feeder_b",
+        "label": "SUPPLIES",
+        "properties": {
+          "description": "The main bus distributes power to the industrial loads feeder."
+        }
+      },
+      {
+        "id": "edge_011",
+        "from": "node_control_panel",
+        "to": "node_engine",
+        "label": "MONITORS_AND_CONTROLS",
+        "properties": {
+          "protocol": "J1939 CANbus",
+          "description": "The GCP monitors engine parameters (speed, oil pressure, coolant temperature) via ECU and sends start/stop commands."
+        }
+      },
+      {
+        "id": "edge_012",
+        "from": "node_control_panel",
+        "to": "node_alternator",
+        "label": "MONITORS",
+        "properties": {
+          "protocol": "current_transformer + voltage_transformer",
+          "description": "The GCP measures alternator output voltage, current, frequency, kW, kVAr and power factor via instrument transformers."
+        }
+      },
+      {
+        "id": "edge_013",
+        "from": "node_control_panel",
+        "to": "node_main_breaker",
+        "label": "CONTROLS",
+        "properties": {
+          "signal_type": "digital_output",
+          "description": "The GCP sends open/close commands to the main circuit breaker based on load conditions and protection logic."
+        }
+      },
+      {
+        "id": "edge_014",
+        "from": "node_control_panel",
+        "to": "node_governor",
+        "label": "SETPOINT_CONTROL",
+        "properties": {
+          "signal_type": "analog_4_20mA",
+          "description": "The GCP adjusts the governor speed setpoint for load sharing and frequency fine-tuning."
+        }
+      },
+      {
+        "id": "edge_015",
+        "from": "node_control_panel",
+        "to": "node_avr",
+        "label": "SETPOINT_CONTROL",
+        "properties": {
+          "signal_type": "analog_4_20mA",
+          "description": "The GCP adjusts the AVR voltage setpoint for reactive power control and voltage fine-tuning."
+        }
+      }
+    ]
+  }
+}

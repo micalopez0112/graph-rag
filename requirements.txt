@@ -1,0 +1,39 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# GraphRAG Power Plant – Python Dependencies
+# ──────────────────────────────────────────────────────────────────────────────
+# Install all at once with:  pip install -r requirements.txt
+# Recommended: create a virtual environment first:
+#   python3 -m venv .venv && source .venv/bin/activate
+
+# ── PDF generation ────────────────────────────────────────────────────────────
+reportlab==4.1.0          # PDF generation library used by data/generate_pdf.py
+
+# ── PDF reading & text extraction ────────────────────────────────────────────
+pdfplumber==0.11.0        # Extract text and tables from PDFs
+
+# ── Text chunking ─────────────────────────────────────────────────────────────
+langchain==0.2.6          # Provides RecursiveCharacterTextSplitter
+
+# ── AWS SDK ───────────────────────────────────────────────────────────────────
+boto3==1.34.144           # AWS SDK: Bedrock (LLM + embeddings), and general AWS access
+
+# ── Graph Database (Neo4j) ───────────────────────────────────────────────────
+neo4j==5.20.0             # Official Neo4j Python driver — uses the Bolt protocol
+
+# ── Vector Database (RDS PostgreSQL + pgvector) ───────────────────────────────
+psycopg2-binary==2.9.9    # PostgreSQL driver for Python
+                           # (psycopg2-binary includes the C lib — easier to install)
+pgvector==0.2.5           # pgvector Python helpers (optional but convenient)
+
+# ── Chatbot API server ────────────────────────────────────────────────────────
+flask==3.0.3              # Lightweight web framework for the /ask API endpoint
+flask-cors==4.0.1         # CORS headers so a browser frontend can call the API
+
+# ── Optional: OpenAI as alternative to Bedrock ───────────────────────────────
+# openai==1.35.0          # Uncomment if using OpenAI instead of Amazon Bedrock
+
+# ── Optional: Streamlit for a quick web UI ────────────────────────────────────
+# streamlit==1.36.0       # Uncomment to use the Streamlit UI variant
+
+# ── Dev / Utilities ───────────────────────────────────────────────────────────
+python-dotenv==1.0.1      # Loads .env file into environment variables automatically

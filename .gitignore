@@ -1,0 +1,18 @@
+credentials/
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables — NEVER commit this
+.env
+
+# Generated PDF (regenerate with: python data/generate_pdf.py)
+data/power_plant_rds_pp_codes.pdf
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
