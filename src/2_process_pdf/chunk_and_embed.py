@@ -56,6 +56,9 @@ DB_PASSWORD     = os.getenv("RDS_PASSWORD", "changeme")
 CHUNK_SIZE      = int(os.getenv("CHUNK_SIZE",    "512"))
 CHUNK_OVERLAP   = int(os.getenv("CHUNK_OVERLAP", "64"))
 
+BEDROCK_EMBEDDING_MODEL_ID = os.getenv("BEDROCK_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0")
+OPENAI_EMBEDDING_MODEL_ID  = os.getenv("OPENAI_EMBEDDING_MODEL_ID",  "text-embedding-ada-002")
+
 
 # ---------------------------------------------------------------------------
 # EMBEDDING
@@ -67,7 +70,7 @@ class BedrockEmbedder:
     Bedrock is AWS's managed AI model service — no model to host yourself.
     Make sure your IAM role has the 'AmazonBedrockFullAccess' policy.
     """
-    MODEL_ID = "amazon.titan-embed-text-v2:0"
+    MODEL_ID = BEDROCK_EMBEDDING_MODEL_ID
     DIM = 1024
 
     def __init__(self):
@@ -94,7 +97,7 @@ class OpenAIEmbedder:
     Uses OpenAI's text-embedding-ada-002 model.
     Requires OPENAI_API_KEY environment variable.
     """
-    MODEL_ID = "text-embedding-ada-002"
+    MODEL_ID = OPENAI_EMBEDDING_MODEL_ID
     DIM = 1536
 
     def __init__(self):

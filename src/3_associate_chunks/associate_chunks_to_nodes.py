@@ -43,7 +43,8 @@ from typing import List, Dict, Optional
 # ---------------------------------------------------------------------------
 # CONFIGURATION
 # ---------------------------------------------------------------------------
-AWS_REGION  = os.getenv("AWS_REGION", "us-east-1")
+AWS_REGION                 = os.getenv("AWS_REGION", "us-east-1")
+BEDROCK_EMBEDDING_MODEL_ID = os.getenv("BEDROCK_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0")
 DB_HOST     = os.getenv("RDS_HOST",     "your-rds.xxxx.us-east-1.rds.amazonaws.com")
 DB_PORT     = os.getenv("RDS_PORT",     "5432")
 DB_NAME     = os.getenv("RDS_DB_NAME",  "graphrag")
@@ -77,7 +78,7 @@ def embed_text(text: str) -> List[float]:
     bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)
     body = json.dumps({"inputText": text})
     response = bedrock.invoke_model(
-        modelId="amazon.titan-embed-text-v2:0", body=body,
+        modelId=BEDROCK_EMBEDDING_MODEL_ID, body=body,
         accept="application/json", contentType="application/json"
     )
     return json.loads(response["body"].read())["embedding"]

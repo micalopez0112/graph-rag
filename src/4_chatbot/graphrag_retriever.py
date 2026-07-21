@@ -35,9 +35,13 @@ DB_NAME        = os.getenv("RDS_DB_NAME",     "graphrag")
 DB_USER        = os.getenv("RDS_USER",        "graphrag_admin")
 DB_PASSWORD    = os.getenv("RDS_PASSWORD",    "changeme")
 
-TOP_K_CHUNKS   = int(os.getenv("TOP_K_CHUNKS",  "5"))
-LLM_PROVIDER   = os.getenv("LLM_PROVIDER",    "bedrock")   # "bedrock" or "openai"
-EMBEDDING_DIM  = int(os.getenv("EMBEDDING_DIM", "1536"))
+TOP_K_CHUNKS               = int(os.getenv("TOP_K_CHUNKS",  "5"))
+LLM_PROVIDER               = os.getenv("LLM_PROVIDER",    "bedrock")   # "bedrock" or "openai"
+EMBEDDING_DIM              = int(os.getenv("EMBEDDING_DIM", "1536"))
+BEDROCK_EMBEDDING_MODEL_ID = os.getenv("BEDROCK_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0")
+BEDROCK_LLM_MODEL_ID       = os.getenv("BEDROCK_LLM_MODEL_ID",       "amazon.nova-lite-v1:0")
+OPENAI_EMBEDDING_MODEL_ID  = os.getenv("OPENAI_EMBEDDING_MODEL_ID",  "text-embedding-ada-002")
+OPENAI_LLM_MODEL_ID        = os.getenv("OPENAI_LLM_MODEL_ID",        "gpt-4o")
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +87,7 @@ class GraphRAGRetriever:
         """Embed the user query using Amazon Bedrock Titan."""
         body = json.dumps({"inputText": text})
         response = self._bedrock.invoke_model(
-            modelId="amazon.titan-embed-text-v2:0", body=body,
+            modelId=BEDROCK_EMBEDDING_MODEL_ID, body=body,
             accept="application/json", contentType="application/json"
         )
         return json.loads(response["body"].read())["embedding"]
@@ -262,7 +266,7 @@ def call_llm_bedrock(question: str, context: str) -> str:
     )
 
     response = bedrock.converse(
-        modelId="amazon.nova-lite-v1:0",
+        modelId=BEDROCK_LLM_MODEL_ID,
         system=[{"text": system_prompt}],
         messages=[{"role": "user", "content": [{"text": user_message}]}],
         inferenceConfig={"maxTokens": 1024, "temperature": 0.1},
@@ -275,7 +279,7 @@ def call_llm_openai(question: str, context: str) -> str:
     import openai
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model=OPENAI_LLM_MODEL_ID,
         messages=[
             {"role": "system", "content": "You are a helpful engineering assistant specialised in power plant operations. Use the provided context to answer questions accurately."},
             {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"}
