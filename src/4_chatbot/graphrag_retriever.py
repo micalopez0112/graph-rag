@@ -235,40 +235,34 @@ class GraphRAGRetriever:
 
 def call_llm_bedrock(question: str, context: str) -> str:
     """
-    Call Claude 3 Sonnet via Amazon Bedrock.
-    Bedrock is the managed AWS AI service — you pay per token, no model hosting.
+    Call Amazon Nova Lite via Amazon Bedrock Converse API.
+    Nova Lite is AWS's own fast, cost-effective LLM — fully ACTIVE, no Anthropic
+    approval needed. Uses the Converse API which is the recommended modern interface.
     Your IAM role needs: AmazonBedrockFullAccess
     """
     bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)
 
-    system_prompt = """You are a helpful engineering assistant specialised in power plant operations. 
-You have access to both structured knowledge (from a graph of plant components and their relationships) 
-and relevant document excerpts. Use BOTH sources of information to give accurate, concise answers.
-Always mention the RDS-PP code of components when relevant.
-If you don't know something from the provided context, say so — do not make up information."""
-
-    user_message = f"""Based on the following context from our power plant knowledge base, please answer this question:
-
-QUESTION: {question}
-
-CONTEXT:
-{context}
-
-Please provide a clear, technical answer."""
-
-    body = json.dumps({
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 1024,
-        "system": system_prompt,
-        "messages": [{"role": "user", "content": user_message}]
-    })
-
-    response = bedrock.invoke_model(
-        modelId="anthropic.claude-3-5-sonnet-20241022-v2:0",
-        body=body, accept="application/json", contentType="application/json"
+    system_prompt = (
+        "You are a helpful engineering assistant specialised in power plant operations. "
+        "You have access to both structured knowledge (from a graph of plant components and their relationships) "
+        "and relevant document excerpts. Use BOTH sources of information to give accurate, concise answers. "
+        "Always mention the RDS-PP code of components when relevant. "
+        "If the context does not contain the answer, say so — do not make up information."
     )
-    result = json.loads(response["body"].read())
-    return result["content"][0]["text"]
+
+    user_message = (
+        f"Based on the following context from our power plant knowledge base, "
+        f"please answer this question:\n\nQUESTION: {question}\n\nCONTEXT:\n{context}\n\n"
+        f"Please provide a clear, technical answer."
+    )
+
+    response = bedrock.converse(
+        modelId="amazon.nova-lite-v1:0",
+        system=[{"text": system_prompt}],
+        messages=[{"role": "user", "content": [{"text": user_message}]}],
+        inferenceConfig={"maxTokens": 1024, "temperature": 0.1},
+    )
+    return response["output"]["message"]["content"][0]["text"]
 
 
 def call_llm_openai(question: str, context: str) -> str:
