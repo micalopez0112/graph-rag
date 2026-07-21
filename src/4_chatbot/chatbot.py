@@ -45,6 +45,11 @@ def answer_question(retriever: GraphRAGRetriever, question: str, show_debug: boo
     # Retrieve context (text chunks + graph context)
     context, debug = retriever.retrieve(question)
 
+    # If no chunks were found the PDF hasn't been processed yet
+    if debug["chunks_retrieved"] == 0:
+        return ("⚠️  No document chunks found in the database. "
+                "Please run setup_rds_pgvector.py and chunk_and_embed.py first (STEP 8).")
+
     if show_debug:
         print("\n── DEBUG ──────────────────────────────────────────────────")
         print(json.dumps(debug, indent=2))
@@ -104,6 +109,12 @@ def run_cli():
                 print("─" * 60)
             except Exception as e:
                 print(f"❌ Error: {e}\n")
+                # Roll back any aborted PostgreSQL transaction so the next
+                # question doesn't fail with "current transaction is aborted"
+                try:
+                    retriever.db.rollback()
+                except Exception:
+                    pass
 
     finally:
         retriever.close()

@@ -121,15 +121,20 @@ class GraphRAGRetriever:
         if not chunk_ids:
             return []
         cur = self.db.cursor()
-        cur.execute("""
-            SELECT DISTINCT neptune_node_id
-            FROM chunk_node_links
-            WHERE chunk_id = ANY(%s)
-            ORDER BY relevance_score DESC NULLS LAST;
-        """, (chunk_ids,))
-        rows = cur.fetchall()
-        cur.close()
-        return [r[0] for r in rows]
+        try:
+            cur.execute("""
+                SELECT neptune_node_id
+                FROM chunk_node_links
+                WHERE chunk_id = ANY(%s)
+                ORDER BY relevance_score DESC NULLS LAST;
+            """, (chunk_ids,))
+            rows = cur.fetchall()
+        except Exception as e:
+            self.db.rollback()
+            raise e
+        finally:
+            cur.close()
+        return list(dict.fromkeys(r[0] for r in rows))  # deduplicate preserving order
 
     def get_node_graph_context(self, node_id: str) -> dict:
         """
