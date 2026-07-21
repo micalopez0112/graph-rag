@@ -547,29 +547,154 @@ to prevent recurrence.
 
 ## Cost Estimate (with $100 AWS credits)
 
-| Service                    | Config                    | Estimated Cost      |
-| -------------------------- | ------------------------- | ------------------- |
-| Neo4j (Docker)             | Community edition         | **$0**              |
-| RDS PostgreSQL             | `db.t3.micro` (free tier) | $0/month (1st year) |
-| EC2 (dev server)           | `t3.small`, used 20h/week | ~$2/month           |
-| Bedrock (Titan Embeddings) | ~50 chunks × $0.0001      | < $0.01 per run     |
-| Bedrock (Claude 3 Sonnet)  | ~100 questions            | < $1/month          |
-| NAT Gateway                | **None (not used)**       | **$0**              |
+| Service                       | Config                             | Estimated Cost      |
+| ----------------------------- | ---------------------------------- | ------------------- |
+| Neo4j (Docker on EC2)         | Community edition                  | **$0**              |
+| RDS PostgreSQL + pgvector     | `db.t3.micro` (free tier)          | $0/month (1st year) |
+| EC2 (dev server)              | `t3.small`, used 20h/week          | ~$2/month           |
+| Bedrock (Titan Embeddings V2) | `amazon.titan-embed-text-v2:0`     | < $0.01 per run     |
+| Bedrock (Amazon Nova Lite)    | `amazon.nova-lite-v1:0`, ~100 q/mo | < $0.10/month       |
+| NAT Gateway                   | **None (not used)**                | **$0**              |
 
 > **Tip:** With this setup (no NAT Gateway, RDS on free tier, EC2 stopped when not working), your $100 credits should comfortably last **3–4 months** of active development.
 
 ---
 
+## 💰 Keeping Costs Low When Not in Use
+
+The only resources that **cost money while idle** are EC2 and RDS. Everything else (Bedrock, Neo4j, pgvector) only charges per use.
+
+### While taking a break (hours / overnight)
+
+**Stop the EC2 instance** — you pay only for EBS storage (~$0.08/GB/month), not for compute.
+
+```bash
+# From your local machine
+aws ec2 stop-instances --instance-ids i-0a3f8dbfbfc2d3f54
+```
+
+Or: **AWS Console → EC2 → Instances → select instance → Instance state → Stop**.
+
+> Neo4j data is safe — it is persisted on the EBS volume (`$HOME/neo4j/data`).
+> The container will restart automatically (because of `--restart unless-stopped`) when the EC2 starts again.
+
+**Stop the RDS instance** — saves ~$0.017/hour.
+
+```bash
+aws rds stop-db-instance --db-instance-identifier graphrag-rds
+```
+
+Or: **AWS Console → RDS → Databases → graphrag-rds → Actions → Stop temporarily**.
+
+> ⚠️ RDS auto-starts after **7 days** if stopped via console — check back if you take a longer break.
+
+---
+
+### Resuming work
+
+```bash
+# Start EC2
+aws ec2 start-instances --instance-ids i-0a3f8dbfbfc2d3f54
+
+# Start RDS
+aws rds start-db-instance --db-instance-identifier graphrag-rds
+```
+
+Then reconnect via SSM Session Manager and run:
+
+```bash
+cd ~/graph-rag
+source .venv/bin/activate
+export $(cat .env | grep -v '^#' | xargs)
+# Neo4j is already running (auto-restarted by Docker)
+python src/4_chatbot/chatbot.py
+```
+
+---
+
+### Finished with the project entirely? (full teardown)
+
+Run these in order to delete everything and stop all charges:
+
+```bash
+# 1. Delete RDS instance (choose "no final snapshot" to avoid storage costs)
+aws rds delete-db-instance \
+  --db-instance-identifier graphrag-rds \
+  --skip-final-snapshot
+
+# 2. Terminate EC2 instance (deletes the EBS volume too)
+aws ec2 terminate-instances --instance-ids i-0a3f8dbfbfc2d3f54
+```
+
+Then clean up the supporting resources in the AWS Console:
+
+| Resource                                 | Where to delete              |
+| ---------------------------------------- | ---------------------------- |
+| RDS subnet group                         | RDS → Subnet groups          |
+| EC2 security groups (`ec2-sg`, `rds-sg`) | EC2 → Security Groups        |
+| IAM role `graphrag-ec2-role`             | IAM → Roles                  |
+| VPC `graphrag-vpc` (and its subnets/IGW) | VPC → Your VPCs → Delete VPC |
+
+> Bedrock has no standing resources to delete — you are only charged per API call.
+
+---
+
 ## Quick Reference: Key AWS Services Used
 
-| Service            | What it is                  | Why we use it                                                    |
-| ------------------ | --------------------------- | ---------------------------------------------------------------- |
-| **Neo4j**          | Graph database (Docker)     | Stores components and their relationships in a traversable graph |
-| **RDS PostgreSQL** | Managed relational database | Stores PDF text chunks and vector embeddings via pgvector        |
-| **Bedrock**        | Managed AI model API        | Generates embeddings (Titan) and chat answers (Claude)           |
-| **EC2 + SSM**      | EC2 with browser terminal   | Runs Neo4j (Docker) and scripts inside the VPC alongside RDS     |
-| **VPC**            | Private network             | Isolates RDS from the internet; EC2 and Neo4j live here too      |
-| **IAM**            | Identity & permissions      | Controls which AWS services can call which other services        |
+| Service                          | What it is                    | What we use it for                                                            |
+| -------------------------------- | ----------------------------- | ----------------------------------------------------------------------------- |
+| **Neo4j Community (Docker)**     | Graph database                | Stores plant components and relationships; traversed at query time            |
+| **RDS PostgreSQL 15 + pgvector** | Managed relational DB         | Stores PDF text chunks, 1024-dim embeddings, and chunk→node links             |
+| **Bedrock – Titan Embed V2**     | Embedding model               | `amazon.titan-embed-text-v2:0` — converts text to 1024-dim vectors            |
+| **Bedrock – Amazon Nova Lite**   | LLM (Converse API)            | `amazon.nova-lite-v1:0` — fast, cost-effective answers from retrieved context |
+| **EC2 t3.small + SSM**           | Dev server + browser terminal | Runs Neo4j (Docker) and all Python scripts inside the VPC                     |
+| **VPC (public subnets only)**    | Private network               | Isolates RDS from the internet; no NAT Gateway needed                         |
+| **IAM**                          | Identity & permissions        | Controls which AWS services can call which other services                     |
+
+---
+
+## Migrating to AWS Neptune (optional)
+
+The current setup uses **Neo4j Community in Docker** on EC2 — free and simple. If you want a fully managed AWS-native graph database, **Amazon Neptune** is the alternative.
+
+### When it makes sense to switch
+
+|                 | Neo4j on EC2 (current)                | AWS Neptune                                                                     |
+| --------------- | ------------------------------------- | ------------------------------------------------------------------------------- |
+| Cost            | ~$0 (Docker is free)                  | ~$0.10/hr for `db.t3.medium` (cheapest instance, ~$72/month) — **no free tier** |
+| Management      | You manage Docker, updates, backups   | Fully managed by AWS                                                            |
+| HA / Multi-AZ   | Manual                                | Built-in                                                                        |
+| AWS integration | Via Bolt from inside VPC              | Native IAM auth, VPC, CloudWatch                                                |
+| Query language  | Cypher (used throughout this project) | openCypher **or** Gremlin **or** SPARQL                                         |
+
+> **Bottom line:** Neptune has no free tier and the minimum cost is ~$70/month. For a dev/learning project, Neo4j on EC2 is the better choice. Neptune makes sense if you're moving to production and need managed HA.
+
+### What you'd need to change
+
+1. **Create a Neptune cluster** — AWS Console → Neptune → Create cluster → choose `db.t3.medium` (smallest), place it in `graphrag-vpc`, same subnets as RDS.
+
+2. **Update `.env`:**
+
+   ```ini
+   NEO4J_URI=bolt+s://<your-neptune-cluster-endpoint>:8182
+   NEO4J_USER=   # leave blank — Neptune uses IAM auth, not username/password
+   NEO4J_PASSWORD=
+   ```
+
+3. **Enable IAM auth on the driver** — Neptune does not accept username/password; swap the driver initialisation in `graphrag_retriever.py`:
+
+   ```python
+   from neo4j import GraphDatabase
+   # Neptune with openCypher over Bolt uses SigV4 signing; use the neptune-python-utils
+   # package or the official bolt+s:// URI with SSL — no auth= needed for IAM mode.
+   driver = GraphDatabase.driver(NEO4J_URI, auth=None)
+   ```
+
+4. **Re-run the upload script** — `upload_to_neo4j.py` uses standard Cypher `MERGE` statements which are fully compatible with Neptune's openCypher engine. No query changes needed.
+
+5. **Security group** — add an inbound rule to the Neptune security group: TCP **8182**, source = EC2 security group (`ec2-sg`).
+
+> The rest of the codebase (pgvector, Bedrock, chatbot) is unaffected.
 
 ---
 
