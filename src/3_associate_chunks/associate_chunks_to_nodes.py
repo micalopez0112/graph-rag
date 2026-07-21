@@ -77,7 +77,7 @@ def embed_text(text: str) -> List[float]:
     bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)
     body = json.dumps({"inputText": text})
     response = bedrock.invoke_model(
-        modelId="amazon.titan-embed-text-v1", body=body,
+        modelId="amazon.titan-embed-text-v2:0", body=body,
         accept="application/json", contentType="application/json"
     )
     return json.loads(response["body"].read())["embedding"]

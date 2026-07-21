@@ -83,7 +83,7 @@ class GraphRAGRetriever:
         """Embed the user query using Amazon Bedrock Titan."""
         body = json.dumps({"inputText": text})
         response = self._bedrock.invoke_model(
-            modelId="amazon.titan-embed-text-v1", body=body,
+            modelId="amazon.titan-embed-text-v2:0", body=body,
             accept="application/json", contentType="application/json"
         )
         return json.loads(response["body"].read())["embedding"]
@@ -264,7 +264,7 @@ Please provide a clear, technical answer."""
     })
 
     response = bedrock.invoke_model(
-        modelId="anthropic.claude-3-sonnet-20240229-v1:0",
+        modelId="anthropic.claude-3-5-sonnet-20241022-v2:0",
         body=body, accept="application/json", contentType="application/json"
     )
     result = json.loads(response["body"].read())

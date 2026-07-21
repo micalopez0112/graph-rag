@@ -277,6 +277,7 @@ docker run \
 ```
 
 Verify it started:
+
 ```bash
 docker ps                                  # should show neo4j-graphrag as "Up"
 docker logs neo4j-graphrag | tail -5       # should end with "Started"
@@ -302,6 +303,7 @@ export $(cat .env | grep -v '^#' | xargs)
 > You now have an EC2 instance running (STEP 4). Connect to it via Session Manager and run the following commands in that terminal.
 
 **Install Docker:**
+
 ```bash
 sudo dnf install -y docker
 sudo systemctl start docker
@@ -312,6 +314,7 @@ docker --version       # verify
 ```
 
 **Start Neo4j as a Docker container:**
+
 ```bash
 docker run \
   --name neo4j-graphrag \
@@ -325,6 +328,7 @@ docker run \
 ```
 
 What each flag does:
+
 - `--detach` → runs in the background
 - `--restart unless-stopped` → auto-starts if the EC2 reboots
 - `-p 7687:7687` → exposes the Bolt port (what our Python code uses)
@@ -333,6 +337,7 @@ What each flag does:
 - `-v $HOME/neo4j/data:/data` → persists graph data outside the container so it survives restarts
 
 **Verify it's running:**
+
 ```bash
 docker ps                               # should show neo4j-graphrag as "Up"
 docker logs neo4j-graphrag | tail -5    # should end with "Started"
@@ -382,11 +387,51 @@ Expected output:
 �� Graph successfully uploaded to Neo4j!
 ```
 
-You can also explore the graph visually via the Cypher query in the Neo4j browser (if you set up the SSH tunnel):
+#### Optional – Explore the graph visually in your browser
+
+The Neo4j browser UI runs on port 7474 and communicates over port 7687 (Bolt). Since both ports are inside the EC2, you need to tunnel **both** to your laptop using two separate SSM sessions.
+
+**Open two terminals on your Mac and run one command in each:**
+
+```bash
+# Terminal 1 – tunnel the UI port
+aws ssm start-session \
+  --target i-YOUR_INSTANCE_ID \
+  --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["7474"],"localPortNumber":["7474"]}'
+
+# Terminal 2 – tunnel the Bolt (data) port
+aws ssm start-session \
+  --target i-YOUR_INSTANCE_ID \
+  --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["7687"],"localPortNumber":["7687"]}'
+```
+
+Keep both terminals open. Then:
+
+1. Open **`http://localhost:7474`** in your browser
+2. Change the connection URL from `neo4j://localhost:7687` to **`bolt://localhost:7687`**
+3. Username: `neo4j` / Password: `graphrag123`
+4. Run this query to see the full graph:
 
 ```cypher
 MATCH (n)-[r]->(m) RETURN n, r, m
 ```
+
+Other useful queries:
+
+```cypher
+-- See one component and everything connected to it
+MATCH (n {id: "node_engine"})-[r]-(m) RETURN n, r, m
+
+-- List all nodes
+MATCH (n) RETURN n.id, n.name, n.pp_code, labels(n)
+
+-- List all relationships
+MATCH (a)-[r]->(b) RETURN a.name, type(r), b.name
+```
+
+> Close the tunnels when done: `Ctrl+C` in both terminal windows.
 
 ---
 
@@ -405,6 +450,46 @@ python src/2_process_pdf/chunk_and_embed.py
 ```
 
 > ⚠️ This makes API calls to Amazon Bedrock for each chunk. With ~50 chunks from our PDF, the cost is fractions of a cent.
+
+#### Optional – Inspect the tables with psql
+
+```bash
+# Install psql client (match your RDS PostgreSQL version)
+sudo dnf install -y postgresql16
+
+# Connect (make sure env vars are loaded first)
+psql -h $RDS_HOST -U $RDS_USER -d $RDS_DB_NAME
+```
+
+Once inside the psql shell:
+
+```sql
+-- List all tables
+\dt
+
+-- Check pgvector extension is enabled
+\dx
+
+-- See the schema of each table
+\d document_chunks
+\d chunk_embeddings
+\d chunk_node_links
+
+-- Count rows in each table (useful after running chunk_and_embed.py)
+SELECT COUNT(*) FROM document_chunks;
+SELECT COUNT(*) FROM chunk_embeddings;
+SELECT COUNT(*) FROM chunk_node_links;
+
+-- Preview a few chunks
+SELECT chunk_id, page_number, left(text_content, 100) AS preview
+FROM document_chunks
+LIMIT 5;
+
+-- Exit psql
+\q
+```
+
+> **Reminder:** if env vars aren't loaded, run `export $(cat ~/graph-rag/.env | grep -v '^#' | xargs)` before connecting.
 
 ---
 
@@ -462,14 +547,14 @@ to prevent recurrence.
 
 ## Cost Estimate (with $100 AWS credits)
 
-| Service                    | Config                        | Estimated Cost      |
-| -------------------------- | ----------------------------- | ------------------- |
-| Neo4j (Docker)             | Community edition             | **$0**              |
-| RDS PostgreSQL             | `db.t3.micro` (free tier)     | $0/month (1st year) |
-| EC2 (dev server)           | `t3.small`, used 20h/week     | ~$2/month           |
-| Bedrock (Titan Embeddings) | ~50 chunks × $0.0001          | < $0.01 per run     |
-| Bedrock (Claude 3 Sonnet)  | ~100 questions                | < $1/month          |
-| NAT Gateway                | **None (not used)**           | **$0**              |
+| Service                    | Config                    | Estimated Cost      |
+| -------------------------- | ------------------------- | ------------------- |
+| Neo4j (Docker)             | Community edition         | **$0**              |
+| RDS PostgreSQL             | `db.t3.micro` (free tier) | $0/month (1st year) |
+| EC2 (dev server)           | `t3.small`, used 20h/week | ~$2/month           |
+| Bedrock (Titan Embeddings) | ~50 chunks × $0.0001      | < $0.01 per run     |
+| Bedrock (Claude 3 Sonnet)  | ~100 questions            | < $1/month          |
+| NAT Gateway                | **None (not used)**       | **$0**              |
 
 > **Tip:** With this setup (no NAT Gateway, RDS on free tier, EC2 stopped when not working), your $100 credits should comfortably last **3–4 months** of active development.
 

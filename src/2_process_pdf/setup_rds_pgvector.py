@@ -38,9 +38,9 @@ DB_PASSWORD = os.getenv("RDS_PASSWORD", "changeme")
 
 # The embedding dimension from your embedding model.
 # text-embedding-ada-002 (OpenAI) = 1536 dimensions
-# amazon.titan-embed-text-v1 (Bedrock) = 1536 dimensions
+# amazon.titan-embed-text-v2:0 (Bedrock) = 1024 dimensions
 # all-MiniLM-L6-v2 (local/HuggingFace) = 384 dimensions
-EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1536"))
+EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1024"))
 
 
 def get_connection():

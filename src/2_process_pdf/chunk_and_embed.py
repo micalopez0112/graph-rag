@@ -67,8 +67,8 @@ class BedrockEmbedder:
     Bedrock is AWS's managed AI model service — no model to host yourself.
     Make sure your IAM role has the 'AmazonBedrockFullAccess' policy.
     """
-    MODEL_ID = "amazon.titan-embed-text-v1"
-    DIM = 1536
+    MODEL_ID = "amazon.titan-embed-text-v2:0"
+    DIM = 1024
 
     def __init__(self):
         self.client = boto3.client("bedrock-runtime", region_name=AWS_REGION)

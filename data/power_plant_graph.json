@@ -16,7 +16,12 @@
           "description": "The diesel internal combustion engine that acts as the prime mover. It converts chemical energy from fuel into mechanical rotation that drives the alternator shaft.",
           "pp_code": "PP-ENG-001",
           "maintenance_interval_hours": 500,
-          "alarms": ["high_coolant_temp", "low_oil_pressure", "overspeed", "underspeed"]
+          "alarms": [
+            "high_coolant_temp",
+            "low_oil_pressure",
+            "overspeed",
+            "underspeed"
+          ]
         }
       },
       {
@@ -34,7 +39,12 @@
           "description": "The three-phase synchronous generator mechanically coupled to the diesel engine. Converts mechanical rotation into AC electrical energy.",
           "pp_code": "PP-ALT-001",
           "protection_class": "IP23",
-          "alarms": ["high_winding_temp", "overvoltage", "undervoltage", "overcurrent"]
+          "alarms": [
+            "high_winding_temp",
+            "overvoltage",
+            "undervoltage",
+            "overcurrent"
+          ]
         }
       },
       {
@@ -114,7 +124,12 @@
           "model": "ComAp InteliGen NT",
           "description": "The master control unit that monitors all plant parameters (voltage, current, frequency, temperature, pressure), manages automatic start/stop sequences, and provides alarms and fault logging.",
           "pp_code": "PP-GCP-001",
-          "communication_protocols": ["Modbus RTU", "Modbus TCP", "CANbus", "J1939"],
+          "communication_protocols": [
+            "Modbus RTU",
+            "Modbus TCP",
+            "CANbus",
+            "J1939"
+          ],
           "display": "7-inch touchscreen",
           "alarms": ["communication_fault", "panel_power_loss"]
         }
